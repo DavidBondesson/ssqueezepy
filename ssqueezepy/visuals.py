@@ -906,7 +906,7 @@ def _maybe_title(title):
     if title is not None:
         title, kw = (title if isinstance(title, tuple) else
                      (title, {}))
-        defaults = dict(loc='center', weight='bold', fontsize=16)
+        defaults = dict(loc='left', weight='bold', fontsize=16)
         for name in defaults:
             kw[name] = kw.get(name, defaults[name])
 >>>>>>> 66ee952... added example for changing penalty term and rewrote README for example purposes
