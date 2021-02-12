@@ -37,7 +37,7 @@ def viz(signal, Tf, ridge, yticks=None, ssq=False):
 
 =======
 # set to 1 to run tests as functions, showing plots; also runs optional tests
-VIZ = 1
+VIZ = 0
 
 
 >>>>>>> 9239064... Add STFT tests, more signals, refine structure
@@ -200,12 +200,13 @@ def tf_transforms(x, t, wavelet='morlet', window=None, padtype='wrap',
     x, t = tsigs.lchirp(N)
     x += x[::-1]
 
-    tf_transforms(x, t,cwt_bw=20)
+    tf_transforms(x, t, cwt_bw=20)
 
 
 def _test_lchirp_parallel():
     """Parallel F.M. linear chirps. OPTIONAL TEST to not add compute time."""
     N = 512
+
     tsigs = TestSignals(N)
     x, t = tsigs.par_lchirp(N)
 
@@ -239,17 +240,17 @@ def viz(x, Tf, ridge_idxs, yticks=None, ssq=False, transform='cwt', show_x=True)
 def tf_transforms(x, t, wavelet='morlet', window=None, padtype='wrap',
                   penalty=.5, n_ridges=2, cwt_bw=15, stft_bw=15,
                   ssq_cwt_bw=4, ssq_stft_bw=4):
-    kw_cwt = dict(t=t, padtype=padtype)
-    kw_stft=dict(fs=((t[-1]-t[0])/len(t))**-1,padtype=padtype)
+    kw_cwt  = dict(t=t, padtype=padtype)
+    kw_stft = dict(fs=1/(t[1] - t[0]), padtype=padtype)
     Twx, ssq_freqs_c, Wx, scales, *_ = ssq_cwt(x,  wavelet, **kw_cwt)
     Tsx, ssq_freqs_s, Sx, Sfs, *_    = ssq_stft(x, window,  **kw_stft)
 
     ckw = dict(penalty=penalty, n_ridges=n_ridges, transform='cwt')
     skw = dict(penalty=penalty, n_ridges=n_ridges, transform='stft')
-    cwt_ridges      = extract_ridges(Wx,  scales,      BW=cwt_bw,      **ckw)
-    ssq_cwt_ridges  = extract_ridges(Twx, ssq_freqs_c, BW=ssq_cwt_bw,  **ckw)
-    stft_ridges     = extract_ridges(Sx,  Sfs,         BW=stft_bw,     **skw)
-    ssq_stft_ridges = extract_ridges(Tsx, ssq_freqs_s, BW=ssq_stft_bw, **skw)
+    cwt_ridges      = extract_ridges(Wx,  scales,      bw=cwt_bw,      **ckw)
+    ssq_cwt_ridges  = extract_ridges(Twx, ssq_freqs_c, bw=ssq_cwt_bw,  **ckw)
+    stft_ridges     = extract_ridges(Sx,  Sfs,         bw=stft_bw,     **skw)
+    ssq_stft_ridges = extract_ridges(Tsx, ssq_freqs_s, bw=ssq_stft_bw, **skw)
 
 >>>>>>> 9239064... Add STFT tests, more signals, refine structure
     viz(x, Wx,  cwt_ridges,      scales,      ssq=0, transform='cwt',  show_x=1)
