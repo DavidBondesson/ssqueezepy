@@ -887,6 +887,7 @@ def _ticks(xticks, yticks):
         xt = [fmt(xticks) % h for h in np.asarray(xticks)[idxs]]
         plt.xticks(idxs, xt)
 
+<<<<<<< HEAD
 def _maybe_title(title, ax=None):
     if title is None:
         return
@@ -900,6 +901,15 @@ def _maybe_title(title, ax=None):
     if ax:
         ax.set_title(str(title), **kw)
     else:
+=======
+def _maybe_title(title):
+    if title is not None:
+        title, kw = (title if isinstance(title, tuple) else
+                     (title, {}))
+        defaults = dict(loc='center', weight='bold', fontsize=16)
+        for name in defaults:
+            kw[name] = kw.get(name, defaults[name])
+>>>>>>> 66ee952... added example for changing penalty term and rewrote README for example purposes
         plt.title(str(title), **kw)
 
 
