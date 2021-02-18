@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 <<<<<<< HEAD
+<<<<<<< HEAD
 """Coverage-mainly tests; see examples/extracting_ridges.py for more test cases.
 """
 import pytest
@@ -11,6 +12,8 @@ from ssqueezepy.visuals import plot, imshow
 # set to 1 to run tests as functions, showing plots
 VIZ = 0
 =======
+=======
+>>>>>>> cfc25f1... Update and rename ridge_extract_test.py to ridge_extraction_test.py
 import pytest
 import numpy as np
 import scipy.signal as sig
@@ -18,7 +21,11 @@ from ssqueezepy import ssq_cwt, extract_ridges
 from ssqueezepy.visuals import plot, imshow
 
 # set to 1 to run tests as functions, showing plots
+<<<<<<< HEAD
 VIZ = 1
+=======
+VIZ = 0
+>>>>>>> cfc25f1... Update and rename ridge_extract_test.py to ridge_extraction_test.py
 
 
 def viz(signal, Tf, ridge, yticks=None, ssq=False):
@@ -37,13 +44,17 @@ def viz(signal, Tf, ridge, yticks=None, ssq=False):
     else:
         imshow(Tf, title="abs(CWT) w/ ridge", **ikw)
         plot(ridge, **pkw, ylabel="Frequency scales [A.U.]")
+<<<<<<< HEAD
 >>>>>>> 66ee952... added example for changing penalty term and rewrote README for example purposes
+=======
+>>>>>>> cfc25f1... Update and rename ridge_extract_test.py to ridge_extraction_test.py
 
 
 def test_basic():
     """Example ridge from similar example as can be found at MATLAB:
     https://www.mathworks.com/help/wavelet/ref/wsstridge.html#bu6we25-penalty
     """
+<<<<<<< HEAD
 <<<<<<< HEAD
     test_matrix = np.array([[1, 4, 4], [2, 2, 2], [5, 5, 4]])
     fs_test = np.exp([1, 2, 3])
@@ -113,6 +124,8 @@ def tf_transforms(x, t, wavelet='morlet', window=None, padtype='wrap',
     viz(x, Tsx, ssq_stft_ridges, ssq_freqs_s, ssq=1, transform='stft', show_x=0)
 
 =======
+=======
+>>>>>>> cfc25f1... Update and rename ridge_extract_test.py to ridge_extraction_test.py
     test_matrix = np.array([[1, 4, 4],[2, 2, 2],[5,5,4]])
     fs_test = np.exp([1,2,3])
 
@@ -124,13 +137,18 @@ def test_sine():
     """Sine + cosine."""
     sig_len, f1, f2 = 500, 0.5, 2.0
     padtype = 'wrap'
+<<<<<<< HEAD
     penalty = 2.0
+=======
+    penalty = 20
+>>>>>>> cfc25f1... Update and rename ridge_extract_test.py to ridge_extraction_test.py
 
     t_vec = np.linspace(0, 10, sig_len, endpoint=True)
     x1 = np.sin(2*np.pi * f1 * t_vec)
     x2 = np.cos(2*np.pi * f2 * t_vec)
     x = x1 + x2
 
+<<<<<<< HEAD
     Tx, ssq_freq, Wx, scales, _ = ssq_cwt(x, t=t_vec, padtype=padtype)
 
     # CWT example
@@ -140,12 +158,27 @@ def test_sine():
     # SSQ_CWT example
     ridge_idxs, _,max_energy = extract_ridges(Tx, ssq_freq, penalty, n_ridges=2, BW=4)
     viz(x, Tx, ridge_idxs, ssq_freq, ssq=True)
+=======
+    Tx, ssq_freqs, Wx, scales, _ = ssq_cwt(x, t=t_vec, padtype=padtype)
+
+    # CWT example
+    ridge_idxs, *_ = extract_ridges(Wx, scales, penalty, n_ridges=2, BW=25)
+    viz(x, Wx, ridge_idxs, scales)
+
+    # SSQ_CWT example
+    ridge_idxs, *_ = extract_ridges(Tx, scales, penalty, n_ridges=2, BW=4)
+    viz(x, Tx, ridge_idxs, ssq_freqs, ssq=True)
+>>>>>>> cfc25f1... Update and rename ridge_extract_test.py to ridge_extraction_test.py
 
 
 def test_chirp():
     """Linear + quadratic chirp."""
     sig_len = 500
+<<<<<<< HEAD
     penalty = 0.1
+=======
+    penalty = 0.5
+>>>>>>> cfc25f1... Update and rename ridge_extract_test.py to ridge_extraction_test.py
     padtype = 'reflect'
 
     t_vec = np.linspace(0, 10, sig_len, endpoint=True)
@@ -160,7 +193,11 @@ def test_chirp():
     viz(x, Wx, ridge_idxs)
 
     # SSQ_CWT example
+<<<<<<< HEAD
     ridge_idxs, *_ = extract_ridges(Tx, ssq_freq, penalty, n_ridges=2, BW=2)
+=======
+    ridge_idxs, *_ = extract_ridges(Tx, scales, penalty, n_ridges=2, BW=2)
+>>>>>>> cfc25f1... Update and rename ridge_extract_test.py to ridge_extraction_test.py
     viz(x, Tx, ridge_idxs, ssq=True)
 
 
@@ -183,6 +220,7 @@ def test_poly():
     viz(x, Wx, ridge_idxs)
 
     # SSQ_CWT example
+<<<<<<< HEAD
     ridge_idxs, *_ = extract_ridges(Tx, ssq_freq, penalty, n_ridges=2, BW=2)
     viz(x, Tx, ridge_idxs, ssq=True)
 
@@ -208,10 +246,16 @@ def test_failed_chirp_wsst():
     
     
 >>>>>>> 66ee952... added example for changing penalty term and rewrote README for example purposes
+=======
+    ridge_idxs, *_ = extract_ridges(Tx, scales, penalty, n_ridges=2, BW=2)
+    viz(x, Tx, ridge_idxs, ssq=True)
+
+>>>>>>> cfc25f1... Update and rename ridge_extract_test.py to ridge_extraction_test.py
 
 if __name__ == '__main__':
     if VIZ:
         test_basic()
+<<<<<<< HEAD
 <<<<<<< HEAD
         test_poly()
 =======
@@ -222,3 +266,10 @@ if __name__ == '__main__':
 >>>>>>> 66ee952... added example for changing penalty term and rewrote README for example purposes
     else:
         pytest.main([__file__, "-s"])
+=======
+        test_sine()
+        test_chirp()
+        test_poly()
+    else:
+        pytest.main([__file__, "-s"])
+>>>>>>> cfc25f1... Update and rename ridge_extract_test.py to ridge_extraction_test.py
