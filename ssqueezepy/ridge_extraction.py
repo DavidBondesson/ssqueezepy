@@ -214,12 +214,16 @@ EPS = np.finfo(np.float64).eps
 def extract_ridges(Tf, scales, penalty=2., n_ridges=1, BW=15, transform='cwt',
                    get_params=False):
     """Tracks time-frequency ridges by performing forward-backward ridge tracking
+<<<<<<< HEAD
     algorithm, based on ref [1].
 <<<<<<< HEAD
 <<<<<<< HEAD
     # Arguments
 =======
 =======
+=======
+    algorithm, based on ref [1] (version of eq. III.4 in publication).
+>>>>>>> 28772d9... added equation ref in ridge_extraction.py
 
 >>>>>>> 984d549... Add STFT support, reformat code
     # Arguments:
