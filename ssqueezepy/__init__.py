@@ -61,10 +61,14 @@ from ._gmw import *
 from ._test_signals import *
 from .wavelets import *
 <<<<<<< HEAD
+<<<<<<< HEAD
 from ._extract_ridges import *
 =======
 from .ridge_extraction import *
 >>>>>>> bc09289... added import to init.py and, test_signals and small change to ridge_extraction_test
+=======
+from ._extract_ridges import *
+>>>>>>> a6dc52f... removed extra readme.md in ridge_extraction renamed ridge_extraction.py to _extract_ridges.py
 from ._test_signals import *
 
 def wavs():
