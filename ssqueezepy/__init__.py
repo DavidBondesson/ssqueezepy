@@ -60,7 +60,11 @@ from ._ssq_stft import *
 from ._gmw import *
 from ._test_signals import *
 from .wavelets import *
+<<<<<<< HEAD
 from ._extract_ridges import *
+=======
+from .ridge_extraction import *
+>>>>>>> bc09289... added import to init.py and, test_signals and small change to ridge_extraction_test
 from ._test_signals import *
 
 def wavs():
