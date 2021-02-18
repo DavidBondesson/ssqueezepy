@@ -9,6 +9,7 @@ from ssqueezepy.visuals import plot, imshow
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 # set to 1 to run tests as functions, showing plots
 <<<<<<< HEAD
 VIZ = 0
@@ -41,6 +42,9 @@ def viz(signal, Tf, ridge, yticks=None, ssq=False):
 =======
 # set to 1 to run tests as functions, showing plots
 >>>>>>> 8133389... Remove redundant tests
+=======
+# set to 1 to run tests as functions, showing plots
+>>>>>>> b23f128... adapted sugested style changes and optimization with jit from numba
 VIZ = 0
 
 
@@ -54,6 +58,7 @@ def test_basic():
 
     ridge_idxs, *_ = extract_ridges(test_matrix, fs_test, penalty=2.0,
                                     get_params=True)
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
     assert np.allclose(ridge_idxs, np.array([[2, 2, 2]]))
@@ -157,6 +162,11 @@ def viz(x, Tf, ridge_idxs, yticks=None, ssq=False, transform='cwt', show_x=True)
 
 
 >>>>>>> 8133389... Remove redundant tests
+=======
+    assert np.allclose(ridge_idxs, np.array([[2, 2, 2]]))
+
+
+>>>>>>> b23f128... adapted sugested style changes and optimization with jit from numba
 def test_poly():
     """Cubic polynomial frequency variation + pure tone."""
     N, f = 257, 0.5
@@ -173,6 +183,7 @@ def test_poly():
 
 >>>>>>> 9239064... Add STFT tests, more signals, refine structure
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 def _test_lchirp_reflected():
     """Reflect-added linear chirps. OPTIONAL TEST to not add compute time."""
@@ -226,6 +237,8 @@ def _test_lchirp_parallel():
 
 =======
 >>>>>>> 8133389... Remove redundant tests
+=======
+>>>>>>> b23f128... adapted sugested style changes and optimization with jit from numba
 def viz(x, Tf, ridge_idxs, yticks=None, ssq=False, transform='cwt', show_x=True):
     if not VIZ:
         return
@@ -255,8 +268,8 @@ def tf_transforms(x, t, wavelet='morlet', window=None, padtype='wrap',
                   ssq_cwt_bw=4, ssq_stft_bw=4):
     kw_cwt  = dict(t=t, padtype=padtype)
     kw_stft = dict(fs=1/(t[1] - t[0]), padtype=padtype)
-    Twx, ssq_freqs_c, Wx, scales, *_ = ssq_cwt(x,  wavelet, **kw_cwt)
-    Tsx, ssq_freqs_s, Sx, Sfs, *_    = ssq_stft(x, window,  **kw_stft)
+    Twx, Wx, ssq_freqs_c, scales, *_ = ssq_cwt(x,  wavelet, **kw_cwt)
+    Tsx, Sx, ssq_freqs_s, Sfs, *_    = ssq_stft(x, window,  **kw_stft)
 
     ckw = dict(penalty=penalty, n_ridges=n_ridges, transform='cwt')
     skw = dict(penalty=penalty, n_ridges=n_ridges, transform='stft')
@@ -285,6 +298,7 @@ if __name__ == '__main__':
         test_basic()
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         test_poly()
 <<<<<<< HEAD
     else:
@@ -304,3 +318,8 @@ if __name__ == '__main__':
     else:
         pytest.main([__file__, "-s"])
 >>>>>>> 9239064... Add STFT tests, more signals, refine structure
+=======
+        test_poly()
+    else:
+        pytest.main([__file__, "-s"])
+>>>>>>> b23f128... adapted sugested style changes and optimization with jit from numba
