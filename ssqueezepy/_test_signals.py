@@ -7,8 +7,7 @@ variety of localization characteristics.
     a. sine
     b. cosine
     c. phase-shifted
-    d. trimmed (others complete exactly one cycle) (not implemented but is
-       trivial; do e.g. `x = x[20:-50]`)
+    d. trimmed (others complete exactly one cycle)  # TODO
 
 2. **<name>:am**: <name> with amplitude modulation, i.e. `A(t) * fn(t)`
     a. |sine|
@@ -25,7 +24,7 @@ variety of localization characteristics.
 6. **hchirp**: hyperbolic chirp, `cos(2pi a/(b - t))`, spanning `fmin` to `fmax`
 
 7, 8, 9: **par_lchirp, par_echirp, par_hchirp**: linear, exponential, hyperbolic
-         chirps, superposed, with frequency modulation in parallel,
+         chirps, superimposed, with frequency modulation in parallel,
          spanning `fmin1` to `fmax1` and `fmin2` to `fmax2`.
 
 10. **jumps**: large instant frequency transitions, `cos(2pi f*t), f=2 -> f=100`
@@ -38,10 +37,11 @@ import inspect
 import numpy as np
 import matplotlib.pyplot as plt
 from numpy.fft import rfft
+from textwrap import wrap
 
 from ._ssq_cwt import ssq_cwt
 from ._ssq_stft import ssq_stft
-from .utils import WARN, _textwrap
+from .utils import WARN
 from .wavelets import Wavelet
 from .visuals import plot, plots, imshow
 
@@ -52,8 +52,8 @@ DEFAULT_ARGS = {
     'cosine': dict(f=8, phi0=0),
     'sine':   dict(f=8, phi0=0),
     'lchirp': dict(tmin=0, tmax=1, fmin=0,  fmax=None),
-    'echirp': dict(tmin=0, tmax=1, fmin=1,  fmax=None),
-    'hchirp': dict(tmin=0, tmax=1, fmin=.5, fmax=None),
+    'echirp': dict(tmin=0, tmax=1, fmin=1, fmax=None),
+    'hchirp': dict(tmin=0, tmax=1, fmin=.5,  fmax=None),
     'jumps':  dict(),
     'low':    dict(),
     'am-cosine': dict(amin=.1),
@@ -77,8 +77,6 @@ class TestSignals():
     See `examples/` on Github, and
     https://overlordgolddragon.github.io/test-signals/
 
-    Also see `TestSignals.SUPPORTED`, `TestSignals.DEMO`.
-
     **Sweep functions**
         For `lchirp`, `echirp`, & `hchirp`, `N` will be determined automatically
         if `tmin`, `tmax`, `fmin`, and `fmax` are provided, minimally such that
@@ -94,7 +92,7 @@ class TestSignals():
 
         default_args: dict
             `{<signal_name>: {'param_name': value}}` pairs, where `signal_name`
-            is one of `SUPPORTED`. See `test_signals.DEFAULT_ARGS`.
+            is one of `SUPPORTED`. See `_test_signals.DEFAULT_ARGS`.
 
         default_tkw: dict
             Example with all key-value pairs: `dict(tmin=0, tmax=1)`.
@@ -103,6 +101,8 @@ class TestSignals():
             Whether to print warning if generated signal aliases (f > fs/2);
             to disable, pass `warn_alias=False` to `__init__()`, or set directly
             on instance (`TestSignals().warn_alias=False`).
+
+    # TODO complete docstrings
     """
     SUPPORTED = ['cosine', 'sine', 'lchirp', 'echirp', 'echirp_pc', 'hchirp',
                  'par-lchirp', 'par-echirp', 'par-hchirp', 'jumps', 'packed',
@@ -329,21 +329,19 @@ class TestSignals():
         return x, t
 
     def am_sine(self, N=None, f=1, amin=0, amax=1, phi=0, **tkw):
-        """Sine amplitude modulation, `|sin(w) + 1| / 2`."""
         N = N or self.default_N
         _A, t = self.sine(N, f, phi, **tkw)
         _A = (_A + 1) / 2
         return amin + (amax - amin) * _A, t
 
     def am_cosine(self, N=None, f=1, amin=0, amax=1, phi=0, **tkw):
-        """Cosine amplitude modulation, `|cos(w) + 1| / 2`."""
         N = N or self.default_N
         _A, t = self.cosine(N, f, phi, **tkw)
         _A = (_A + 1) / 2
         return amin + (amax - amin) * _A, t
 
     def am_exp(self, N=None, amin=.1, amax=1, **tkw):
-        """Uses `echirp`'s expression for `f(t)`."""
+        """Use `echirp`'s expression for `f(t)`"""
         N = N or self.default_N
         t, tmin, tmax = self._process_params(N, tkw)
         _A = self._echirp_fn(t, tmin, tmax, amin, amax, get_w=True)[1]
@@ -351,14 +349,12 @@ class TestSignals():
         return _A, t
 
     def am_gauss(self, N=None, amin=.1, amax=1, **tkw):
-        """Gaussian centered at center sample (`N/2`)."""
         N = N or self.default_N
         t = _t(-1, 1, N)
         _A = np.exp( -((t - t.mean())**2 * 5) )
         return amin + (amax - amin)*_A, t
 
     def jumps(self, N=None, freqs=None, **tkw):
-        """Large instant freq transitions, e.g. `cos(2pi f*t), f=2 -> f=100`."""
         N = N or self.default_N
         t, tmin, tmax = self._process_params(N, tkw)
         if freqs is None:
@@ -377,12 +373,8 @@ class TestSignals():
         return x, t
 
     def packed(self, N=None, freqs=None, overlap=.8, **tkw):
-        """Closely-spaced bands of sinusoids with majority overlap, e.g.
-            `cos(w*t[No:]) + cos((w+1)*t[-No:]) + cos((w+3)*t[No:]) + ...`,
-            `No = .8*len(t)`.
-        """
         N = N or self.default_N
-        t, *_ = self._process_params(N, tkw)
+        t, tmin, tmax = self._process_params(N, tkw)
         if freqs is None:
             freqs = [.5, 1, 2, N/10, N/10 + N/50, N/10 + N/25,
                      N/5, N/4, N/3, N/3 + N/10]
@@ -396,23 +388,7 @@ class TestSignals():
         return x, t
 
     #### Test functions ######################################################
-    def demo(self, signals='all', N=None, dft=None):
-        """Plots signal waveforms, and optionally their DFTs.
-
-        # Arguments:
-            signals: str / [str] / [(str, dict)]
-                'all' will set `signals = TestSignals.DEMO`, and plot in
-                that order. Else, strings must be in `TestSignals.SUPPORTED`.
-                Can also be `(str, dict)` pairs in a list, dict passed as
-                keyword arguments to the generating function.
-
-            N: int
-                Length (# of samples) of generated signals.
-
-            dft: None / str['rows', 'cols']
-                If not None, will also plot DFT of each signal along the signal.
-                If `'cols'`, will stack horizontally - if `'rows'`, vertically.
-        """
+    def demo(self, signals='all', sweep=False, N=None, dft=None):
         data = self.make_signals(signals, N)
         if dft not in (None, 'rows', 'cols'):
             raise ValueError(f"`dft` must be 'rows', 'cols', or None (got {dft})")
@@ -459,13 +435,6 @@ class TestSignals():
 
     #### utils ###############################################################
     def make_signals(self, signals='all', N=None):
-        """Generates `signals` signals of length `N`.
-
-        Returns dictionary of `{name: x, t, (fparams, aparams)}`, where `x` is
-        the signal, `t` is its time vector, `fparams` is a dict of keyword args
-        to the carrier, and `aparams` to the amplitude modulator (if applicable,
-        e.g. `lchirp:am-sine').
-        """
         def _process_args(name, fparams, aparams):
             fname, aname = (name.split(':') if ':' in name else
                             (name, ''))
@@ -488,7 +457,7 @@ class TestSignals():
 
         data = {}
         for name, (fparams, aparams) in zip(names, params_all):
-            fn, afn, *_, tkw = _process_args(name, fparams, aparams)
+            fn, afn, fname, aname, tkw = _process_args(name, fparams, aparams)
             x, t = fn(N, **fparams)
             x *= afn(len(x), **aparams, **tkw)[0]
             if name[0] == '#':
@@ -498,18 +467,16 @@ class TestSignals():
         return data
 
     @classmethod
-    def _title(self, signal, N, fparams, aparams, wrap_len=70):
+    def _title(self, signal, N, fparams, aparams, wrap_len=50):
         fparams = self._process_varname_alias(signal, N, fparams)
         fparams = dict(N=N, **fparams)
 
         ptxt = ', '.join(f"{k}={v}" for k, v in fparams.items())
         title = "{} | {}".format(signal, ptxt)
-
         if aparams:
             atxt = ', '.join(f"{k}={v}" for k, v in aparams.items())
             title += ', %s' % atxt
-
-        title = _textwrap(title, wrap_len)
+        title = _wrap(title, wrap_len)
         return title
 
     @staticmethod
@@ -517,7 +484,7 @@ class TestSignals():
         fparams = fparams.copy()
         for k, v in fparams.items():
             if (k == 'fmax' and v is None and
-                    any(s in signal for s in ('lchirp', 'echirp', 'hchirp'))):
+                    signal in ['lchirp', 'echirp', 'hchirp']):
                 fparams['fmax'] = N / 2
         return fparams
 
@@ -677,9 +644,6 @@ class TestSignals():
     #### prebuilt test methods ##############################################
     def wavcomp(self, wavelets, signals='all', N=None, w=1.2, h=None,
                 tight_kw=None):
-        """Plots CWT & SSQ_CWT taken with `wavelets` wavelets side by side,
-        vertically.
-        """
         if not isinstance(wavelets, (list, tuple)):
             wavelets = [wavelets]
         wavs = []
@@ -715,13 +679,6 @@ class TestSignals():
     def cwt_vs_stft(self, wavelet, window, signals='all', N=None,
                     win_len=None, n_fft=None, window_name=None, config_str='',
                     w=1.2, h=.9, tight_kw=None):
-        """Plots CWT & SSQ_CWT, and STFT & SSQ_STFT of `signals` taken with
-        `wavelet` and `window` along the rest of parameters.
-
-        `window_name` & `config_str` are used to title STFT plots. `w` & `h`
-        control plots' width & height. `tight_kw` is passed to
-        `plt.subplots_adjust()`.
-        """
         fn = lambda x, t, params: self._cwt_vs_stft_fn(
             x, t, params, wavelet, window, win_len, n_fft, window_name,
             config_str, w, h, tight_kw)
@@ -768,7 +725,7 @@ class TestSignals():
         ctitle1 = title + '\nabs(CWT) | ' + twav
         ctitle2 = 'abs(SSQ_CWT)'
 
-        ctitle1 = _textwrap(ctitle1, wrap_len)
+        ctitle1 = _wrap(ctitle1, wrap_len)
         return ctitle1, ctitle2
 
     @staticmethod
@@ -781,8 +738,15 @@ class TestSignals():
         stitle1 = title + '\nabs(STFT) | ' + twin
         stitle2 = 'abs(SSQ_STFT)'
 
-        stitle1 = _textwrap(stitle1, wrap_len)
+        stitle1 = _wrap(stitle1, wrap_len)
         return stitle1, stitle2
+
+
+def _wrap(txt, wrap_len=50):
+    """Preserves line breaks and includes `'\n'.join()` step."""
+    return '\n'.join(['\n'.join(
+        wrap(line, 90, break_long_words=False, replace_whitespace=False))
+        for line in txt.splitlines() if line.strip() != ''])
 
 
 def _t(tmin, tmax, N, endpoint=False):
