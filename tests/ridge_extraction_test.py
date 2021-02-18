@@ -8,6 +8,7 @@ from ssqueezepy import ssq_cwt, ssq_stft, extract_ridges
 from ssqueezepy.visuals import plot, imshow
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 # set to 1 to run tests as functions, showing plots
 <<<<<<< HEAD
 VIZ = 0
@@ -37,6 +38,9 @@ def viz(signal, Tf, ridge, yticks=None, ssq=False):
 
 =======
 # set to 1 to run tests as functions, showing plots; also runs optional tests
+=======
+# set to 1 to run tests as functions, showing plots
+>>>>>>> 8133389... Remove redundant tests
 VIZ = 0
 
 
@@ -50,6 +54,7 @@ def test_basic():
 
     ridge_idxs, *_ = extract_ridges(test_matrix, fs_test, penalty=2.0,
                                     get_params=True)
+<<<<<<< HEAD
 <<<<<<< HEAD
     assert np.allclose(ridge_idxs, np.array([[2, 2, 2]]))
 
@@ -147,6 +152,11 @@ def viz(x, Tf, ridge_idxs, yticks=None, ssq=False, transform='cwt', show_x=True)
     ridge_idxs, *_ = extract_ridges(Wx, scales, penalty, n_ridges=2, BW=25)
     viz(x, Wx, ridge_idxs)
 =======
+=======
+    assert np.allclose(ridge_idxs, np.array([[2, 2, 2]]))
+
+
+>>>>>>> 8133389... Remove redundant tests
 def test_poly():
     """Cubic polynomial frequency variation + pure tone."""
     N, f = 257, 0.5
@@ -163,6 +173,7 @@ def test_poly():
 
 >>>>>>> 9239064... Add STFT tests, more signals, refine structure
 
+<<<<<<< HEAD
 def _test_lchirp_reflected():
     """Reflect-added linear chirps. OPTIONAL TEST to not add compute time."""
     N = 512
@@ -213,6 +224,8 @@ def _test_lchirp_parallel():
     tf_transforms(x, t)
 
 
+=======
+>>>>>>> 8133389... Remove redundant tests
 def viz(x, Tf, ridge_idxs, yticks=None, ssq=False, transform='cwt', show_x=True):
     if not VIZ:
         return
@@ -269,8 +282,8 @@ def tf_transforms(x, t, wavelet='morlet', window=None, padtype='wrap',
 
 if __name__ == '__main__':
     if VIZ:
-        from ssqueezepy import TestSignals
         test_basic()
+<<<<<<< HEAD
 <<<<<<< HEAD
         test_poly()
 <<<<<<< HEAD
@@ -285,9 +298,9 @@ if __name__ == '__main__':
 =======
         test_sine()
         test_chirp_lq()
+=======
+>>>>>>> 8133389... Remove redundant tests
         test_poly()
-        _test_lchirp_reflected()
-        _test_lchirp_parallel()
     else:
         pytest.main([__file__, "-s"])
 >>>>>>> 9239064... Add STFT tests, more signals, refine structure
