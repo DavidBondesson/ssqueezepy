@@ -211,7 +211,7 @@ import numpy as np
 EPS = np.finfo(np.float64).eps
 
 
-def extract_ridges(Tf, scales, penalty=2., n_ridges=1, BW=15, transform='cwt',
+def extract_ridges(Tf, scales, penalty=2., n_ridges=1, bw=15, transform='cwt',
                    get_params=False):
     """Tracks time-frequency ridges by performing forward-backward ridge tracking
 <<<<<<< HEAD
@@ -247,6 +247,7 @@ import numpy as np
 
 EPS = np.finfo(np.float64).eps
 
+<<<<<<< HEAD
 
 def extract_ridges(Tf, scales, penalty=2., n_ridges=1, BW=25):
     """Tracks time-frequency ridges by performing forward-backward ridge tracking
@@ -275,6 +276,12 @@ def extract_ridges(Tf, scales, penalty=2., n_ridges=1, BW=25):
             Decides how many bins will be subtracted around max
             energy frequency bins when extracting multiple ridges
             (2 is standard value for syncrosqueezed transform).
+=======
+        bw: int
+            Decides how many bins will be subtracted around max energy frequency
+            bins when extracting multiple ridges (2 is standard for ssq'd).
+            See "bw selection".
+>>>>>>> 0bff8ec... `bw` docstring, styling
 
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -300,12 +307,29 @@ def extract_ridges(Tf, scales, penalty=2., n_ridges=1, BW=25):
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 037161f... Update ridge_extraction.py
 =======
 
 >>>>>>> cf17b5b... merge review changes of initial PR 11.02.2021
 =======
 >>>>>>> 984d549... Add STFT support, reformat code
+=======
+    **bw selection**
+
+    When a component is extracted, a region around it (a number of bins above
+    and below the ridge) is zeroed and no longer affects next ridge's extraction.
+        - higher: more bins subtracted, lesser chance of selecting the same
+        component as the ridge.
+        - lower:  less bins subtracted, lesser chance of dropping an unrelated
+        component before the component is considered.
+        - In general, set higher if more `scales` (or greater `nv`), or lower
+        frequency resolution:
+            - cwt:  `wavelets.freq_resolution(wavelet, N, nondim=False)`
+            - stft: `utils.window_resolution(window)`
+            - `N = utils.p2up(len(x))[0]`
+
+>>>>>>> 0bff8ec... `bw` docstring, styling
     # References
         1. On the extraction of instantaneous frequencies from ridges in
         time-frequency representations of signals.
@@ -359,8 +383,8 @@ def extract_ridges(Tf, scales, penalty=2., n_ridges=1, BW=25):
         """
         penalized_energy = energy_to_track.copy()
 
-        for idx_time in range(1, penalized_energy.shape[1], 1):
-            for idx_freq in range(0, penalized_energy.shape[0], 1):
+        for idx_time in range(1, penalized_energy.shape[1]):
+            for idx_freq in range(0, penalized_energy.shape[0]):
                 penalized_energy[idx_freq, idx_time
                                  ] += np.amin(penalized_energy[:, idx_time - 1] +
                                               penalty_matrix[idx_freq, :])
@@ -536,7 +560,7 @@ def extract_ridges(Tf, scales, penalty=2., n_ridges=1, BW=25):
 
         for time_idx in range(n_timeshifts):
             ridx = ridge_idxs[time_idx, i]
-            energy[int(ridx - BW):int(ridx + BW), time_idx] = 0
+            energy[int(ridx - bw):int(ridx + bw), time_idx] = 0
 
 <<<<<<< HEAD
 <<<<<<< HEAD
