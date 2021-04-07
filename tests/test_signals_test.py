@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Test ssqueezepy/_test_signals.py"""
+import os
 import pytest
 import numpy as np
 import scipy.signal as sig
@@ -7,6 +8,7 @@ from ssqueezepy import Wavelet, TestSignals
 from ssqueezepy.utils import window_resolution
 
 VIZ = 0
+os.environ['SSQ_GPU'] = '0'  # in case concurrent tests set it to '1'
 
 
 def test_demo():
@@ -25,6 +27,7 @@ def test_demo():
 
 
 def test_wavcomp():
+    os.environ['SSQ_GPU'] = '0'
     tsigs = TestSignals(N=256)
     wavelets = [Wavelet(('gmw', {'beta': 5})),
                 Wavelet(('gmw', {'beta': 22})),
@@ -40,12 +43,14 @@ def test_wavcomp():
 
 
 def test_cwt_vs_stft():
+    os.environ['SSQ_GPU'] = '0'
     # (N, beta, NW): (512, 42.5, 255); (256, 21.5, 255)
     N = 256#512
     signals = 'all'
+    snr = 5
     n_fft = N
     win_len = n_fft#//2
-    tsigs = TestSignals(N=N)
+    tsigs = TestSignals(N=N, snr=snr)
     wavelet = Wavelet(('GMW', {'beta': 21.5}))
 
     NW = win_len//2 - 1
@@ -65,10 +70,44 @@ def test_cwt_vs_stft():
                       n_fft=n_fft, window_name=window_name, config_str=config_str)
 
 
+def test_ridgecomp():
+    os.environ['SSQ_GPU'] = '0'
+    N = 256
+    n_ridges = 3
+    penalty = 25
+    signals = 'poly-cubic'
+
+    tsigs = TestSignals(N=N)
+    kw = dict(N=N, signals=signals, n_ridges=n_ridges, penalty=penalty)
+    tsigs.ridgecomp(transform='cwt',  **kw)
+    tsigs.ridgecomp(transform='stft', **kw)
+
+
+def test_gpu():
+    """Test that TestSignals can run on GPU."""
+    try:
+        import torch
+        torch.tensor(1., device='cuda')
+    except:
+        return
+
+    N = 256
+    tsigs = TestSignals(N=N)
+    window = np.abs(sig.windows.dpss(N, N//2 - 1))
+    signals = 'par-lchirp'
+
+    os.environ['SSQ_GPU'] = '1'
+    wavelet = Wavelet()
+    tsigs.cwt_vs_stft(wavelet, window, signals=signals, N=N)
+    os.environ['SSQ_GPU'] = '0'
+
+
 if __name__ == '__main__':
     if VIZ:
         test_demo()
         test_wavcomp()
         test_cwt_vs_stft()
+        test_ridgecomp()
+        test_gpu()
     else:
         pytest.main([__file__, "-s"])

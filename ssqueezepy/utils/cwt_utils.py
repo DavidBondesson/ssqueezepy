@@ -2,26 +2,26 @@
 import numpy as np
 from scipy import integrate
 from .common import WARN, assert_is_one_of, p2up
-from ..algos import _min_neglect_idx, find_maximum, find_first_occurrence
+from .backend import torch, asnumpy
+from ..configs import gdefaults
 
 pi = np.pi
 
 __all__ = [
-    "adm_ssq",
-    "adm_cwt",
-    "find_min_scale",
-    "find_max_scale",
-    "find_max_scale_alt",
-    "cwt_scalebounds",
-    "process_scales",
-    "logscale_transition_idx",
-    "nv_from_scales",
-    "make_scales",
-    "find_downsampling_scale",
-    "infer_scaletype",
-    "integrate_analytic",
-    "_process_fs_and_t",
-    "_assert_positive_integer",
+    'adm_ssq',
+    'adm_cwt',
+    'cwt_scalebounds',
+    'process_scales',
+    'infer_scaletype',
+    'make_scales',
+    'logscale_transition_idx',
+    'nv_from_scales',
+    'find_min_scale',
+    'find_max_scale',
+    'find_downsampling_scale',
+    'integrate_analytic',
+    'find_max_scale_alt',
+    '_process_fs_and_t',
 ]
 
 
@@ -42,7 +42,7 @@ def adm_ssq(wavelet):
         https://arxiv.org/pdf/0912.2437.pdf
     """
     wavelet = Wavelet._init_if_not_isinstance(wavelet).fn
-    Css = integrate_analytic(lambda w: np.conj(wavelet(w)) / w)
+    Css = integrate_analytic(lambda w: np.conj(asnumpy(wavelet(w))) / w)
     Css = Css.real if abs(Css.imag) < 1e-15 else Css
     return Css
 
@@ -57,56 +57,10 @@ def adm_cwt(wavelet):
     https://www.di.ens.fr/~mallat/papiers/WaveletTourChap1-2-3.pdf
     """
     wavelet = Wavelet._init_if_not_isinstance(wavelet).fn
-    Cpsi = integrate_analytic(lambda w: np.conj(wavelet(w)) * wavelet(w) / w)
+    Cpsi = integrate_analytic(lambda w: np.conj(asnumpy(wavelet(w))
+                                                ) * asnumpy(wavelet(w)) / w)
     Cpsi = Cpsi.real if abs(Cpsi.imag) < 1e-15 else Cpsi
     return Cpsi
-
-
-def find_min_scale(wavelet, cutoff=1):
-    """Design the wavelet in frequency domain. `scale` is found to yield
-    `scale * xi(scale=1)` such that its last (largest) positive value evaluates
-    `wavelet` to `cutoff * max(psih)`. If cutoff > 0, it lands to right of peak,
-    else to left (i.e. peak excluded).
-    """
-    wavelet = Wavelet._init_if_not_isinstance(wavelet)
-    w_peak, peak = find_maximum(wavelet.fn)
-    if cutoff > 0:
-        # search to right of peak
-        step_start, step_limit = w_peak, 10*w_peak
-    else:
-        # search to left of peak
-        step_start, step_limit = 0, w_peak
-
-    w_cutoff, _ = find_first_occurrence(wavelet.fn, value=abs(cutoff) * peak,
-                                        step_start=step_start,
-                                        step_limit=step_limit)
-    min_scale = w_cutoff / np.pi
-    return min_scale
-
-
-def find_max_scale(wavelet, N, bin_loc=1, bin_amp=1):
-    """Finds `scale` such that freq-domain wavelet's amplitude is `bin_amp`
-    of maximum at `bin_loc` bin. Set `bin_loc=1` to ensure no lower frequencies
-    are lost, but likewise mind redundancy (see `make_scales`).
-    """
-    wavelet = Wavelet._init_if_not_isinstance(wavelet)
-
-    # get scale at which full freq-domain wavelet is likely to fit
-    wc_ct = center_frequency(wavelet, kind='peak-ct', N=N)
-    scalec_ct = (4/pi) * wc_ct
-
-    # get freq_domain wavelet, positive half (asm. analytic)
-    psih = wavelet(scale=scalec_ct, N=N)[:N//2 + 1]
-    # get (radian) frequencies at which it was sampled
-    xi = wavelet.xifn(scalec_ct, N)
-    # get index of psih's peak
-    midx = np.argmax(psih)
-    # get index where `psih` attains `bin1_amp` of its max value, to left of peak
-    w_bin = xi[np.where(psih[:midx] < psih.max()*bin_amp)[0][-1]]
-
-    # find scale such that wavelet amplitude is `bin_amp` of max at `bin_loc` bin
-    max_scale = scalec_ct * (w_bin / xi[bin_loc])
-    return max_scale
 
 
 def cwt_scalebounds(wavelet, N, preset=None, min_cutoff=None, max_cutoff=None,
@@ -265,7 +219,8 @@ def process_scales(scales, N, wavelet=None, nv=None, get_params=False,
                 raise ValueError("must set `wavelet` if `scales` isn't array")
             scaletype = scales
 
-        elif isinstance(scales, np.ndarray):
+        elif isinstance(scales, (np.ndarray, torch.Tensor)):
+            scales = asnumpy(scales)
             if scales.squeeze().ndim != 1:
                 raise ValueError("`scales`, if array, must be 1D "
                                  "(got shape %s)" % str(scales.shape))
@@ -289,7 +244,7 @@ def process_scales(scales, N, wavelet=None, nv=None, get_params=False,
         return scaletype, nv, preset
 
     scaletype, nv, preset = _process_args(scales, nv, wavelet)
-    if isinstance(scales, np.ndarray):
+    if isinstance(scales, (np.ndarray, torch.Tensor)):
         scales = scales.reshape(-1, 1)
         return (scales if not get_params else
                 (scales, scaletype, len(scales), nv))
@@ -311,6 +266,7 @@ def infer_scaletype(scales):
 
     Returns one of: 'linear', 'log', 'log-piecewise'
     """
+    scales = asnumpy(scales).reshape(-1, 1)
     if not isinstance(scales, np.ndarray):
         raise TypeError("`scales` must be a numpy array (got %s)" % type(scales))
     elif scales.dtype not in (np.float32, np.float64):
@@ -341,62 +297,8 @@ def infer_scaletype(scales):
     return scaletype, nv
 
 
-def logscale_transition_idx(scales):
-    """Returns `idx` that splits `scales` as `[scales[:idx], scales[idx:]]`.
-    """
-    scales_diff2 = np.abs(np.diff(np.log(scales), 2, axis=0))
-    idx = np.argmax(scales_diff2) + 2
-    diff2_max = scales_diff2.max()
-    # every other value must be zero, assert it is so
-    scales_diff2[idx - 2] = 0
-
-    if not np.any(diff2_max > 100*np.abs(scales_diff2).mean()):
-        # everything's zero, i.e. no transition detected
-        return None
-    elif not np.all(np.abs(scales_diff2) < 1e-14):
-        # other nonzero diffs found, more than one transition point
-        return None
-    else:
-        return idx
-
-
-def nv_from_scales(scales):
-    """Infers `nv` from `scales` assuming `2**` scales; returns array
-    of length `len(scales)` if `scaletype = 'log-piecewise'`.
-    """
-    logdiffs = 1 / np.diff(np.log2(scales), axis=0)
-    nv = np.vstack([logdiffs[:1], logdiffs])
-
-    idx = logscale_transition_idx(scales)
-    if idx is not None:
-        nv_transition_idx = np.argmax(np.abs(np.diff(nv, axis=0))) + 1
-        assert nv_transition_idx == idx, "%s != %s" % (nv_transition_idx, idx)
-    return nv
-
-
-def _process_fs_and_t(fs, t, N):
-    """Ensures `t` is uniformly-spaced and of same length as `x` (==N)
-    and returns `fs` and `dt` based on it, or from defaults if `t` is None.
-    """
-    if t is not None:
-        if len(t) != N:
-            # not explicitly used anywhere but ensures wrong `t` wasn't supplied
-            raise Exception("`t` must be of same length as `x` "
-                            "(%s != %s)" % (len(t), N))
-        elif not np.mean(np.abs(np.diff(t, 2, axis=0))) < 1e-7:  # float32 thr.
-            raise Exception("Time vector `t` must be uniformly sampled.")
-        fs = 1 / (t[1] - t[0])
-    else:
-        if fs is None:
-            fs = 1
-        elif fs <= 0:
-            raise ValueError("`fs` must be > 0")
-    dt = 1 / fs
-    return dt, fs, t
-
-
 def make_scales(N, min_scale=None, max_scale=None, nv=32, scaletype='log',
-                wavelet=None, downsample=3):
+                wavelet=None, downsample=None):
     """Recommended to first work out `min_scale` & `max_scale` with
     `cwt_scalebounds`.
 
@@ -426,10 +328,12 @@ def make_scales(N, min_scale=None, max_scale=None, nv=32, scaletype='log',
     if scaletype == 'log-piecewise' and wavelet is None:
         raise ValueError("must pass `wavelet` for `scaletype == 'log-piecewise'`")
     if min_scale is None and max_scale is None and wavelet is not None:
-        min_scale, max_scale = cwt_scalebounds(wavelet, N)
+        min_scale, max_scale = cwt_scalebounds(wavelet, N, use_padded_N=True)
     else:
         min_scale = min_scale or 1
         max_scale = max_scale or N
+    downsample = int(gdefaults('utils.cwt_utils.make_scales',
+                               downsample=downsample))
 
     # number of 2^-distributed scales spanning min to max
     na = int(np.ceil(nv * np.log2(max_scale / min_scale)))
@@ -444,7 +348,6 @@ def make_scales(N, min_scale=None, max_scale=None, nv=32, scaletype='log',
     elif scaletype == 'log-piecewise':
         scales = 2 ** (np.arange(mn_pow, mx_pow) / nv)
         idx = find_downsampling_scale(wavelet, scales)
-
         if idx is not None:
             # `+downsample - 1` starts `scales2` as continuing from `scales1`
             # at `scales2`'s sampling rate; rest of ops are based on this design,
@@ -467,8 +370,92 @@ def make_scales(N, min_scale=None, max_scale=None, nv=32, scaletype='log',
     return scales
 
 
+def logscale_transition_idx(scales):
+    """Returns `idx` that splits `scales` as `[scales[:idx], scales[idx:]]`.
+    """
+    scales = asnumpy(scales)
+    scales_diff2 = np.abs(np.diff(np.log(scales), 2, axis=0))
+    idx = np.argmax(scales_diff2) + 2
+    diff2_max = scales_diff2.max()
+    # every other value must be zero, assert it is so
+    scales_diff2[idx - 2] = 0
+
+    th = 1e-14 if scales.dtype == np.float64 else 1e-6
+
+    if not np.any(diff2_max > 100*np.abs(scales_diff2).mean()):
+        # everything's zero, i.e. no transition detected
+        return None
+    elif not np.all(np.abs(scales_diff2) < th):
+        # other nonzero diffs found, more than one transition point
+        return None
+    else:
+        return idx
+
+
+def nv_from_scales(scales):
+    """Infers `nv` from `scales` assuming `2**` scales; returns array
+    of length `len(scales)` if `scaletype = 'log-piecewise'`.
+    """
+    scales = asnumpy(scales)
+    logdiffs = 1 / np.diff(np.log2(scales), axis=0)
+    nv = np.vstack([logdiffs[:1], logdiffs])
+
+    idx = logscale_transition_idx(scales)
+    if idx is not None:
+        nv_transition_idx = np.argmax(np.abs(np.diff(nv, axis=0))) + 1
+        assert nv_transition_idx == idx, "%s != %s" % (nv_transition_idx, idx)
+    return nv
+
+
+def find_min_scale(wavelet, cutoff=1):
+    """Design the wavelet in frequency domain. `scale` is found to yield
+    `scale * xi(scale=1)` such that its last (largest) positive value evaluates
+    `wavelet` to `cutoff * max(psih)`. If cutoff > 0, it lands to right of peak,
+    else to left (i.e. peak excluded).
+    """
+    wavelet = Wavelet._init_if_not_isinstance(wavelet)
+    w_peak, peak = find_maximum(wavelet.fn)
+    if cutoff > 0:
+        # search to right of peak
+        step_start, step_limit = w_peak, 10*w_peak
+    else:
+        # search to left of peak
+        step_start, step_limit = 0, w_peak
+
+    w_cutoff, _ = find_first_occurrence(wavelet.fn, value=abs(cutoff) * peak,
+                                        step_start=step_start,
+                                        step_limit=step_limit)
+    min_scale = w_cutoff / pi
+    return min_scale
+
+
+def find_max_scale(wavelet, N, bin_loc=1, bin_amp=1):
+    """Finds `scale` such that freq-domain wavelet's amplitude is `bin_amp`
+    of maximum at `bin_loc` bin. Set `bin_loc=1` to ensure no lower frequencies
+    are lost, but likewise mind redundancy (see `make_scales`).
+    """
+    wavelet = Wavelet._init_if_not_isinstance(wavelet)
+
+    # get scale at which full freq-domain wavelet is likely to fit
+    wc_ct = center_frequency(wavelet, kind='peak-ct', N=N)
+    scalec_ct = (4/pi) * wc_ct
+
+    # get freq_domain wavelet, positive half (asm. analytic)
+    psih = asnumpy(wavelet(scale=scalec_ct, N=N)[:N//2 + 1])
+    # get (radian) frequencies at which it was sampled
+    xi = asnumpy(wavelet.xifn(scalec_ct, N))
+    # get index of psih's peak
+    midx = np.argmax(psih)
+    # get index where `psih` attains `bin1_amp` of its max value, to left of peak
+    w_bin = xi[np.where(psih[:midx] < psih.max()*bin_amp)[0][-1]]
+
+    # find scale such that wavelet amplitude is `bin_amp` of max at `bin_loc` bin
+    max_scale = scalec_ct * (w_bin / xi[bin_loc])
+    return max_scale
+
+
 def find_downsampling_scale(wavelet, scales, span=5, tol=3, method='sum',
-                            nonzero_th=.02, nonzero_tol=4., viz=False,
+                            nonzero_th=.02, nonzero_tol=4., N=None, viz=False,
                             viz_last=False):
     """Find `scale` past which freq-domain wavelets are "excessively redundant",
     redundancy determined by `span, tol, method, nonzero_th, nonzero_tol`.
@@ -503,6 +490,11 @@ def find_downsampling_scale(wavelet, scales, span=5, tol=3, method='sum',
             Average number of nonzero points in a `span` group of wavelets above
             which testing is exempted. (e.g. if 5 wavelets have 25 nonzero points,
             average is 5, so if `nonzero_tol=4`, the `scale` is skipped/passed).
+
+        N: int / None
+            Length of wavelet to use. Defaults to 2048, which generalizes well
+            along other defaults, since those params (`span`, `tol`, etc) would
+            need to be scaled alongside `N`.
 
         viz: bool (default False)
             Visualize every test for debug purposes.
@@ -544,8 +536,11 @@ def find_downsampling_scale(wavelet, scales, span=5, tol=3, method='sum',
     if not isinstance(wavelet, np.ndarray):
         wavelet = Wavelet._init_if_not_isinstance(wavelet)
 
-    Psih = (wavelet if isinstance(wavelet, np.ndarray) else
-            wavelet(scale=scales))
+    N = N or 2048
+    Psih = (wavelet if isinstance(wavelet, (np.ndarray, torch.Tensor)) else
+            wavelet(scale=scales, N=N))
+    Psih = asnumpy(Psih)
+
     if len(Psih) != len(scales):
         raise ValueError("len(Psih) != len(scales) "
                          "(%s != %s)" % (len(Psih), len(scales)))
@@ -692,12 +687,35 @@ def find_max_scale_alt(wavelet, N, min_cutoff=.1, max_cutoff=.8):
     div_scale = div_size[idx + 1]
 
     # div size of scale=1 (spacing between angular bins at scale=1)
-    w_1div = np.pi / (N / 2)
+    w_1div = pi / (N / 2)
 
     max_scale = div_scale / w_1div
     return max_scale
 
 
+def _process_fs_and_t(fs, t, N):
+    """Ensures `t` is uniformly-spaced and of same length as `x` (==N)
+    and returns `fs` and `dt` based on it, or from defaults if `t` is None.
+    """
+    if t is not None:
+        if len(t) != N:
+            # not explicitly used anywhere but ensures wrong `t` wasn't supplied
+            raise Exception("`t` must be of same length as `x` "
+                            "(%s != %s)" % (len(t), N))
+        elif not np.mean(np.abs(np.diff(t, 2, axis=0))) < 1e-7:  # float32 thr.
+            raise Exception("Time vector `t` must be uniformly sampled.")
+        fs = 1 / (t[1] - t[0])
+    else:
+        if fs is None:
+            fs = 1
+        elif fs <= 0:
+            raise ValueError("`fs` must be > 0")
+    dt = 1 / fs
+    return dt, fs, t
+
+
+#############################################################################
+from ..algos import _min_neglect_idx, find_maximum, find_first_occurrence
 from ..wavelets import Wavelet, center_frequency
 from ..visuals import plot, scat, _viz_cwt_scalebounds, wavelet_waveforms
 from ..visuals import sweep_harea

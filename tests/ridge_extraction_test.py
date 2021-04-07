@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """Coverage-mainly tests; see examples/extracting_ridges.py for more test cases.
 """
+import os
 import pytest
 import numpy as np
 import scipy.signal as sig
-from ssqueezepy import ssq_cwt, ssq_stft, extract_ridges
+from ssqueezepy import ssq_cwt, ssq_stft, extract_ridges, cwt
 from ssqueezepy.visuals import plot, imshow
 
 <<<<<<< HEAD
@@ -46,6 +47,8 @@ def viz(signal, Tf, ridge, yticks=None, ssq=False):
 # set to 1 to run tests as functions, showing plots
 >>>>>>> b23f128... adapted sugested style changes and optimization with jit from numba
 VIZ = 0
+os.environ['SSQ_GPU'] = '0'  # in case concurrent tests set it to '1'
+
 
 
 >>>>>>> 9239064... Add STFT tests, more signals, refine structure
@@ -204,6 +207,7 @@ def test_failed_chirp_wsst():
 def tf_transforms(x, t, wavelet='morlet', window=None, padtype='wrap',
                   penalty=.5, n_ridges=2, cwt_bw=15, stft_bw=15,
                   ssq_cwt_bw=4, ssq_stft_bw=4):
+    os.environ['SSQ_GPU'] = '0'
     kw_cwt  = dict(t=t, padtype=padtype)
     kw_stft = dict(fs=1/(t[1] - t[0]), padtype=padtype)
     Twx, Wx, ssq_freqs_c, scales, *_ = ssq_cwt(x,  wavelet, **kw_cwt)
@@ -293,6 +297,19 @@ def tf_transforms(x, t, wavelet='morlet', window=None, padtype='wrap',
 >>>>>>> 9239064... Add STFT tests, more signals, refine structure
 
 
+def test_parallel():
+    """Ensure `parallel=True` output matches that of `=False`."""
+    for N in (255, 512):
+        x = np.random.randn(N)
+        Wx, scales = cwt(x)
+
+        out0 = extract_ridges(Wx, scales, parallel=False)
+        out1 = extract_ridges(Wx, scales, parallel=True)
+
+        adiff = np.abs(out0 - out1)
+        assert np.allclose(out0, out1), "N=%s, Max err: %s" % (N, adiff.max())
+
+
 if __name__ == '__main__':
     if VIZ:
         test_basic()
@@ -320,6 +337,6 @@ if __name__ == '__main__':
 >>>>>>> 9239064... Add STFT tests, more signals, refine structure
 =======
         test_poly()
+        test_parallel()
     else:
         pytest.main([__file__, "-s"])
->>>>>>> b23f128... adapted sugested style changes and optimization with jit from numba

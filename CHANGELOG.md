@@ -1,4 +1,40 @@
-### 0.6.0 (2-18-2021): Generalized Morse Wavelets, Ridge Extraction, Testing Suite
+### 0.6.1 (3-24-2021): GPU & CPU acceleration; caching
+
+#### FEATURES
+ - GPU acceleration & multi-thread CPU support for all forward transforms (`cwt, stft, ssq_cwt, ssq_stft`); see [Performance guide](https://github.com/OverLordGoldDragon/ssqueezepy/blob/master/ssqueezepy/README.md#performance-guide)
+ - `ssqueezepy.FFT`, supporting single- & multi-threaded CPU execution, and GPU execution, optionally via `pyfftw`
+ - `dtype='float32'` and `'float64'` support for `cwt, stft, ssq_cwt, ssq_stft, Wavelet`
+ - `Wavelet.Psih(scale=, N=)` will store the computed wavelet(s) and, if subsequent calls have identical `scale` and `N`, will return it directly without recomputing (significant speedup).
+ 
+#### BREAKING
+ - Dependency added: `ftz` 
+ - Default `downsample`: 3 -> 4 in `utils.cwt_utils.make_scales`
+ - `EPS` deprecated in favor of `EPS32` & `EPS64` for respective precisions
+ - `ssq_cwt(flipud=True)` default now returns `Tx = np.flipud(Tx)` relative to previous versions
+ - `ssq_cwt` & `ssq_stft` number of variables returned now depend on `get_w, get_dWx` parameters; see docstrings
+ - `dtype` defaults to `'float32'` (can change via `configs.ini`); neither `cwt` nor `stft`, for most applications, require extreme precision like filters do, so defaults should prioritize compute
+ - `TestSignals.make_signals()` now returns list of signals by default instead of dict with meta info (now accessible via `get_params=True`)
+
+#### FIXES
+ - `ssq_stft` would still default `n_fft = len(x)`; defaulter line removed, delegated to `stft`.
+ - `ssqueezing`: improperly handled return of `infer_scaletype`
+ - `ssqueezing`: `_get_center_frequency` computed at `N` instead of `p2up(N)` with `padtype != None`
+
+#### MISC
+ - `configs.ini`: added new configurable defaults
+ - `ssqueezing.ssqueeze`: added `padtype` arg (see FIXES)
+ - `ssqueezing.ssqueeze` & `ssq_cwt`: added `find_closest_parallel` arg (see its docstring)
+ - `utils.cwt_utils`: `find_downsampling_scale` added argument `N`
+ - `visuals.imshow`: removed default `'interpolation' = 'none'`
+ - Added `# Arguments:` docstring to `Wavelet`
+ - `cwt` significantly sped up: 1) per `Wavelet` reuse; 2) rid of `ifftshift` and `*pn` (they undo each other); 3) eliminated redundant allocation in `vectorized`
+
+
+#### NOTES
+ - Undocumented changes; skimming docstrings / source code should suffice for most purposes
+
+
+### 0.6.0 (2-19-2021): Generalized Morse Wavelets, Ridge Extraction, Testing Suite
 
 #### FEATURES (major)
  - Added [Generalized Morse Wavelets](https://overlordgolddragon.github.io/generalized-morse-wavelets/) (`gmw`, `morsewave` in `_gmw.py`)
@@ -32,7 +68,7 @@
  - `_infer_scaletype` -> `infer_scaletype`
  - `_integrate_analytic` -> `integrate_analytic`
  - `find_max_scale` -> `find_max_scale_alt`, but `find_max_scale` is still (but a different) function
- 
+
 #### MISC
  - `phase_cwt`: takes `abs(w)` instead of zeroing negatives
  - `wavelet` in `icwt` and `issq_cwt` now defaults to the default wavelet
@@ -47,13 +83,14 @@
 #### FIXES
  - `visuals.wavelet_heatmap`: string `scales` now functional
  - `visuals`: `w` overreached into negative frequencies for odd `N` in `wavelet_tf`, `wavelet_tf_anim`, & `wavelet_heatmap`
- - `icwt`: `padtype` now functional 
+ - `icwt`: `padtype` now functional
 
 #### FILE CHANGES
  - `ssqueezepy/` added: `_gmw.py`, `_test_signals.py`, `ridge_extraction.py`, `configs.ini`, `README.md`
  - `ssqueezepy/` added `utils/`, split `utils.py` into `common.py`, `cwt_utils.py`, `stft_utils.py`, `__init__.py`, & moved to `utils/`.
  - `tests/` added: `gmw_test.py`, `test_signals_test.py`, `ridge_extraction_test.py`
  - `examples/` added: `extracting_ridges.py`, `scales_selection.py`, `ridge_extract_readme/`: `README.md`, `imgs/*`
+ - Created `MANIFEST.in`
 
 
 ### 0.5.5 (1-14-2021): STFT & Synchrosqueezed STFT
